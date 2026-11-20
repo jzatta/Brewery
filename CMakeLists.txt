@@ -40,6 +40,7 @@ target_link_options(${PROJECT_NAME}.elf PRIVATE
     ${MCU_FLAGS}
     -T${CMAKE_SOURCE_DIR}/STM32F429ZITx_FLASH.ld
     -Wl,--gc-sections -Wl,-Map=${PROJECT_NAME}.map
+    -Wl,--no-warn-rwx-segments
     --specs=nano.specs --specs=nosys.specs -u _printf_float)
 
 add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD

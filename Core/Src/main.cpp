@@ -9,11 +9,19 @@
 #include <cstdio>
 #include <cstring>
 #include "stm32f4xx_hal.h"
+#include "uart.hpp"
+#include "wifi.hpp"
 
 extern "C" {
 UART_HandleTypeDef huart3;  /* debug / printf (usada por syscalls.c) */
 }
 UART_HandleTypeDef huart6;  /* ESP-AT         */
+
+static Uart espUart(&huart6);
+static WiFi wifi(espUart);          /* WiFi<Uart>, sem vtable */
+
+static constexpr const char* WIFI_SSID = "YOUR_SSID";
+static constexpr const char* WIFI_PASS = "YOUR_PASSWORD";
 
 /* Exemplo de classe C++ com construtor executado antes do main() */
 class Led {
@@ -33,26 +41,6 @@ static void SystemClock_Config(void);
 static void GPIO_Init(void);
 static void UART_Init(void);
 
-/* Envia um comando AT e imprime a resposta (polling, simples). */
-static void esp_at(const char *cmd, uint32_t timeout_ms)
-{
-    uint8_t c;
-    uint32_t t0;
-
-    printf(">> %s\r\n", cmd);
-    HAL_UART_Transmit(&huart6, (uint8_t *)cmd, std::strlen(cmd), 100);
-    HAL_UART_Transmit(&huart6, (uint8_t *)"\r\n", 2, 100);
-
-    t0 = HAL_GetTick();
-    while (HAL_GetTick() - t0 < timeout_ms) {
-        if (HAL_UART_Receive(&huart6, &c, 1, 10) == HAL_OK) {
-            putchar(c);
-            t0 = HAL_GetTick(); /* renova o timeout enquanto chegam dados */
-        }
-    }
-    printf("\r\n");
-}
-
 int main()
 {
     HAL_Init();
@@ -62,8 +50,19 @@ int main()
 
     printf("\r\nNUCLEO-F429ZI (C++) @ %lu MHz\r\n", HAL_RCC_GetSysClockFreq() / 1000000UL);
 
-    esp_at("AT", 500);
-    esp_at("AT+GMR", 500);
+    if (!wifi.begin()) {
+        printf("ESP-AT nao responde\r\n");
+    } else if (!wifi.connect(WIFI_SSID, WIFI_PASS)) {
+        printf("Falha no WiFi: %s\r\n", wifi.lastRaw());
+    } else {
+        HttpResponse r;
+        if (wifi.httpPost("http://ntfy.sh/test222", "teste", r)) {
+            printf("HTTP POST ok (%lu/%lu bytes):\r\n%s\r\n",
+                   (unsigned long)r.length, (unsigned long)r.size, r.data);
+        } else {
+            printf("HTTP POST falhou: %s\r\n", wifi.lastRaw());
+        }
+    }
 
     while (1) {
         ledGreen.toggle();
