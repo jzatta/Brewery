@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "stm32f4xx_hal.h"
+#include "Test.h"
 
 UART_HandleTypeDef huart3;  /* debug / printf */
 UART_HandleTypeDef huart6;  /* ESP-AT         */

@@ -18,7 +18,7 @@ add_executable(${PROJECT_NAME}.elf
     Core/Src/syscalls.c
     Core/Src/system_stm32f4xx.c
     Core/Startup/startup_stm32f429xx.s
-    Core/Test.cpp
+    Core/Src/Test.cpp
     ${HAL_SRC})
 
 target_compile_definitions(${PROJECT_NAME}.elf PRIVATE
