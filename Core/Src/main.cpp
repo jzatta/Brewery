@@ -6,13 +6,28 @@
  *  - USART3 (PD8 TX / PD9 RX) -> ST-LINK VCP, usada pelo printf()
  *  - USART6 (PG14 TX / PG9 RX = Arduino D1 / D0) -> modulo ESP-AT, 115200 8N1
  */
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <cstring>
 #include "stm32f4xx_hal.h"
-#include "Test.h"
 
-UART_HandleTypeDef huart3;  /* debug / printf */
+extern "C" {
+UART_HandleTypeDef huart3;  /* debug / printf (usada por syscalls.c) */
+}
 UART_HandleTypeDef huart6;  /* ESP-AT         */
+
+/* Exemplo de classe C++ com construtor executado antes do main() */
+class Led {
+public:
+    Led(GPIO_TypeDef *port, uint16_t pin) : port_(port), pin_(pin) {}
+    void toggle() { HAL_GPIO_TogglePin(port_, pin_); }
+    void set(bool on) { HAL_GPIO_WritePin(port_, pin_, on ? GPIO_PIN_SET : GPIO_PIN_RESET); }
+private:
+    GPIO_TypeDef *port_;
+    uint16_t pin_;
+};
+
+static Led ledGreen(GPIOB, GPIO_PIN_0);
+static Led ledRed(GPIOB, GPIO_PIN_14);
 
 static void SystemClock_Config(void);
 static void GPIO_Init(void);
@@ -25,7 +40,7 @@ static void esp_at(const char *cmd, uint32_t timeout_ms)
     uint32_t t0;
 
     printf(">> %s\r\n", cmd);
-    HAL_UART_Transmit(&huart6, (uint8_t *)cmd, strlen(cmd), 100);
+    HAL_UART_Transmit(&huart6, (uint8_t *)cmd, std::strlen(cmd), 100);
     HAL_UART_Transmit(&huart6, (uint8_t *)"\r\n", 2, 100);
 
     t0 = HAL_GetTick();
@@ -38,33 +53,29 @@ static void esp_at(const char *cmd, uint32_t timeout_ms)
     printf("\r\n");
 }
 
-int main(void)
+int main()
 {
     HAL_Init();
     SystemClock_Config();
     GPIO_Init();
     UART_Init();
 
-    printf("\r\nNUCLEO-F429ZI @ %lu MHz\r\n", HAL_RCC_GetSysClockFreq() / 1000000UL);
+    printf("\r\nNUCLEO-F429ZI (C++) @ %lu MHz\r\n", HAL_RCC_GetSysClockFreq() / 1000000UL);
 
     esp_at("AT", 500);
     esp_at("AT+GMR", 500);
 
     while (1) {
-        HAL_GPIO_TogglePin(GPIOB, GPIO_PIN_0);
-        if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_SET) {
-            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);
-        } else {
-            HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);
-        }
+        ledGreen.toggle();
+        ledRed.set(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13) == GPIO_PIN_SET);
         HAL_Delay(500);
     }
 }
 
 static void SystemClock_Config(void)
 {
-    RCC_OscInitTypeDef osc = {0};
-    RCC_ClkInitTypeDef clk = {0};
+    RCC_OscInitTypeDef osc{};
+    RCC_ClkInitTypeDef clk{};
 
     __HAL_RCC_PWR_CLK_ENABLE();
     __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
@@ -92,7 +103,7 @@ static void SystemClock_Config(void)
 
 static void GPIO_Init(void)
 {
-    GPIO_InitTypeDef g = {0};
+    GPIO_InitTypeDef g{};
 
     __HAL_RCC_GPIOB_CLK_ENABLE();
     __HAL_RCC_GPIOC_CLK_ENABLE();
@@ -111,7 +122,7 @@ static void GPIO_Init(void)
 
 static void UART_Init(void)
 {
-    GPIO_InitTypeDef g = {0};
+    GPIO_InitTypeDef g{};
 
     __HAL_RCC_GPIOD_CLK_ENABLE();
     __HAL_RCC_GPIOG_CLK_ENABLE();

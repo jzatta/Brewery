@@ -27,7 +27,7 @@ Para gravar pelo container, adicione `--privileged -v /dev/bus/usb:/dev/bus/usb`
 ou grave no host com `st-flash`/OpenOCD.
 
 ## Estrutura
-    Core/Src/main.c          clock, GPIO, UARTs, helper esp_at()
+    Core/Src/main.cpp        clock, GPIO, UARTs, helper esp_at()
     Core/Src/syscalls.c      printf -> USART3
     Core/Inc/stm32f4xx_hal_conf.h   so RCC/GPIO/DMA/UART/PWR/FLASH/CORTEX ligados
     STM32F429ZITx_FLASH.ld   linker script (2 MB flash, 192 KB RAM)
